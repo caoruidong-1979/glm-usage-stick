@@ -1,0 +1,58 @@
+#pragma once
+#include "api.h"
+#ifdef MANGO_UI
+#include "status.h"
+#endif
+#include "history.h"   // self-guarded: empty on non-S3 boards
+#include "news.h"
+
+void uiInit();
+void uiBootProgress(int percent, const char* label);
+void uiSetupScreen(const char* apName, const char* apPass, bool reconfigure = false);
+void uiPinScreen(int pos, const int digits[4]);
+void uiConnecting(const char* ssid, int attempt = 0);
+void uiDashboard(const UsageData& data, unsigned long lastFetchMs, int rssi, int batPct);
+// Lightweight in-place update of the clock + reset countdowns (no bars, no full clear)
+// so the periodic refresh doesn't flicker. Call when only time has passed, not data.
+void uiDashboardClock(const UsageData& data, unsigned long lastFetchMs, int rssi);
+// GLM flame screen (single-screen builds on panels ≥320px): the pixelfx
+// campfire where flame height/color = remaining 5-hour quota. Full paint on
+// data refresh / screen switch; Tick drives the ~15fps fire + 1s text beats.
+#if !defined(DUST_UI) && !defined(MANGO_UI) && !defined(BOARD_ESP32C3_OLED) && SCREEN_W >= 320
+void uiFlameScreen(const UsageData& data, unsigned long lastFetchMs, int rssi, int batPct);
+void uiFlameTick(const UsageData& data, unsigned long lastFetchMs, int rssi, int batPct);
+// Vertical full-viewport flame, no text — quota told by color/height alone.
+// Caller must lcd.setRotation(0) before showing and restore SCREEN_ROT after.
+void uiFlamePortraitScreen(const UsageData& data);
+void uiFlamePortraitTick(const UsageData& data);
+#define UI_HAS_FLAME 1
+#endif
+void uiError(const char* title, const char* detail = nullptr);
+// Lockout is drawn in two parts so the caller owns the wait: Static paints the
+// chrome once, Tick repaints the remaining seconds. This lets the wait loop be
+// sliced (and, on the T-Display S3, pump the web panel between slices).
+void uiLockoutStatic(int attempts, int maxAttempts, int lockoutSec);
+void uiLockoutTick(int secondsLeft);
+#ifdef DUST_UI
+// LAN URL shown on the PIN screen and alternated into the dashboard header.
+void uiSetNetInfo(const char* url);
+// Header label (from dev_name, uppercased); empty falls back to "CLAUDE USAGE".
+void uiSetHeaderLabel(const char* name);
+// Which model mascots render (bit per model, panel setting).
+void uiSetModelMask(uint8_t mask);
+// Flip the header's left text between label and URL (screensTick's 10s beat).
+void uiHeaderAlternate();
+// v3 carousel screens — all sprite-rendered, full-push, flicker-free.
+void uiChartScreen(const HistSlot* slots, uint32_t newestEpoch,
+                   unsigned long lastFetchMs, int rssi);
+void uiNewsScreen(const NewsState& news, unsigned long lastFetchMs, int rssi);
+void uiClockScreen(const UsageData& data, unsigned long lastFetchMs, int rssi);
+#endif
+#ifdef MANGO_UI
+// Latest model health for the dashboard's mascot row; cached until the next call.
+void uiSetModelStatus(const ModelStatus& s);
+// Apply (or undo) the 180° flip and clear; caller redraws the current screen.
+void uiApplyRotation(bool flipped);
+// Close (true) or open (false) the healthy mascots' eyes on the dashboard.
+void uiBlinkTick(bool closed);
+#endif // MANGO_UI

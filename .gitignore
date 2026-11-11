@@ -1,0 +1,10 @@
+.pio/
+.vscode/
+upload_data.py
+.DS_Store
+web/firmware/
+.playwright-mcp/
+panel-login.png
+
+# local personal credentials — never commit
+src/config_secret.h
